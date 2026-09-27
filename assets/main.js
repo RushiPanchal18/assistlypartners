@@ -81,6 +81,41 @@ document.documentElement.classList.add('js');
     }, 60);
   }
 
+  // Stat counters
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var statNums = document.querySelectorAll('.stat-num[data-count]');
+  if (statNums.length) {
+    var animateCount = function (el) {
+      var target = parseFloat(el.getAttribute('data-count')) || 0;
+      var prefix = el.getAttribute('data-prefix') || '';
+      var suffix = el.getAttribute('data-suffix') || '';
+      if (reduceMotion) { el.textContent = prefix + target + suffix; return; }
+      var start = null;
+      var duration = 1100;
+      var step = function (ts) {
+        if (!start) start = ts;
+        var progress = Math.min((ts - start) / duration, 1);
+        var eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = prefix + Math.round(eased * target) + suffix;
+        if (progress < 1) window.requestAnimationFrame(step);
+      };
+      window.requestAnimationFrame(step);
+    };
+    if (!('IntersectionObserver' in window)) {
+      statNums.forEach(animateCount);
+    } else {
+      var statIo = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            animateCount(entry.target);
+            statIo.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.4 });
+      statNums.forEach(function (el) { statIo.observe(el); });
+    }
+  }
+
   // Contact form: client-side validation + Netlify-friendly submit state
   var form = document.querySelector('form[data-contact]');
   if (form) {
